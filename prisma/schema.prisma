@@ -1,0 +1,49 @@
+// Prisma is the ORM for all relational access (settings + run history).
+// It runs server-side only (API routes / route handlers) — the browser never
+// connects to the database directly.
+//
+// Connection model (Supabase):
+//   DATABASE_URL  -> pooled connection (PgBouncer, port 6543) used at runtime;
+//                    serverless-friendly. Add ?pgbouncer=true to the URL.
+//   DIRECT_URL    -> direct connection (port 5432) used for migrations / db push.
+//
+// The schema below mirrors the tables created in Supabase (snake_case columns
+// mapped to camelCase fields). Keep this file as the source of truth: run
+// `npm run db:push` to reconcile the database with any future model changes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Single shared row (id is pinned to 1 by a DB check constraint). Holds the
+/// configurable base URLs for the two sites being compared.
+model Settings {
+  id            Int      @id @default(1)
+  liveBase      String   @map("live_base")
+  migrationBase String   @map("migration_base")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+/// One row per comparison run. The nested locale/viewport tree is stored as
+/// JSONB (`locales`) because it is read and written atomically and never
+/// queried per-viewport — normalizing would add joins for zero benefit.
+model Run {
+  runId          String   @id @map("run_id")
+  liveUrl        String   @map("live_url")
+  testUrl        String   @map("test_url")
+  localeCodes    String[] @default([]) @map("locale_codes")
+  maxDiffPercent Float?   @map("max_diff_percent")
+  locales        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt(sort: Desc)], map: "runs_created_at_idx")
+  @@map("runs")
+}

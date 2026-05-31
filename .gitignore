@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+build
+*.log
+.DS_Store
+
+# Generated comparison runs
+public/runs
+
+# Env
+.env
+.env.local

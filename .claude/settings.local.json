@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(rm -rf /Users/e25test/Documents/Repos/qa-tool/public/runs/*)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

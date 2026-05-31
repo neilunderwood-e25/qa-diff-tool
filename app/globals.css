@@ -1,0 +1,258 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PRECISION INSTRUMENT — design tokens
+   Near-black canvas, electric-lime signal, fine technical grid. The whole UI
+   reads like a measurement device: clinical, high-contrast, monospace data.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+
+  --bg: #08090a;
+  --bg-elev: #0d0f12;
+  --panel: #111418;
+  --panel-2: #161a1f;
+  --line: #1e242b;
+  --line-bright: #2c343d;
+
+  --text: #e9edf0;
+  --text-dim: #99a1aa;
+  --text-faint: #5e656e;
+
+  --lime: #c8ff00;
+  --lime-dim: #aadb00;
+  --lime-glow: rgba(200, 255, 0, 0.5);
+
+  --amber: #ffb02e;
+  --red: #ff5d4d;
+  --cyan: #4dd9ff;
+}
+
+* {
+  border-color: var(--line);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* Fixed atmospheric backdrop: a faint engineering grid + lime glow + vignette.
+   Sits behind all content; pointer-events none. */
+.grid-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+.grid-backdrop::before {
+  /* lime glow bleeding from the top */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(200, 255, 0, 0.07) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 60% at 100% 0%,
+      rgba(77, 217, 255, 0.04) 0%,
+      transparent 50%
+    );
+}
+.grid-backdrop::after {
+  /* darkening vignette toward the edges for depth */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    100% 100% at 50% 30%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+/* ── Typographic helpers ── */
+.font-display {
+  font-family: var(--font-display), ui-monospace, monospace;
+}
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Selection + focus signal in lime */
+::selection {
+  background: var(--lime);
+  color: #0a0a0a;
+}
+
+/* Thin technical scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-bright) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-bright);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: content-box;
+}
+
+/* ── Component primitives ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* Corner-ticked panel — adds measurement-device crop marks at the corners */
+.ticked {
+  position: relative;
+}
+.ticked::before,
+.ticked::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-color: var(--line-bright);
+  border-style: solid;
+}
+.ticked::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+  border-top-left-radius: 14px;
+}
+.ticked::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 1px 1px 0;
+  border-bottom-right-radius: 14px;
+}
+
+/* Lime CTA button */
+.btn-lime {
+  background: var(--lime);
+  color: #0a0a0a;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 0 0 1px rgba(200, 255, 0, 0.35), 0 8px 24px -10px var(--lime-glow);
+}
+.btn-lime:hover:not(:disabled) {
+  background: #d4ff33;
+  box-shadow: 0 0 0 1px rgba(200, 255, 0, 0.6),
+    0 10px 30px -8px var(--lime-glow);
+  transform: translateY(-1px);
+}
+.btn-lime:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-lime:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Field input */
+.field {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field::placeholder {
+  color: var(--text-faint);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px rgba(200, 255, 0, 0.14);
+}
+
+/* Custom lime range slider (onion skin) */
+input[type="range"].rng {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-bright);
+  outline: none;
+}
+input[type="range"].rng::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--lime);
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(200, 255, 0, 0.18), 0 0 14px var(--lime-glow);
+}
+input[type="range"].rng::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--lime);
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(200, 255, 0, 0.18);
+}
+
+/* ── Entrance animations ── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(400%);
+  }
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.rise {
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dot-live {
+  animation: blink 1.6s ease-in-out infinite;
+}
