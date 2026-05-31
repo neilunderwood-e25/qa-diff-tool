@@ -1,79 +1,152 @@
-# Visual QA Tool — Live vs Test
+# PIXELDRIFT — Visual QA Tool
 
-A local web app to visually compare two webpages (e.g. production vs a migrated
-test target). It captures full-page screenshots of both URLs at **desktop** and
-**mobile** widths using Playwright, then shows a pixel diff three ways: a diff
-**heatmap**, **side-by-side**, and an **onion-skin** opacity slider — with a
-percentage difference score per viewport.
+Compare a **live** website against a **migration/test** website, side by side.
+For any page you give it, PixelDrift captures full-page screenshots at **desktop
+and mobile**, shows you exactly which pixels changed, and checks whether the
+migration's **meta tags** match the live site. Use it to catch visual and SEO
+regressions before a migration goes live.
 
-## Setup
+> [!IMPORTANT]
+> **To run this locally you need the secret config file (`.env.local`).**
+> It is **not** in the repo (it holds database and API keys). **Ask
+> [Nadun Nissanka](mailto:nadun.u@eight25media.com) for the `.env.local`
+> values** and drop the file in the project root before starting. Without it the
+> app won't connect to the database, sign-in, or storage, and nothing will work.
 
-```bash
-npm install
-npx playwright install chromium   # one-time: downloads the headless browser (~150MB)
-npm run dev
-```
+---
 
-Open http://localhost:3000, paste a Live URL and a Test URL, and click
-**Run comparison**.
+## What it looks like
 
-Example:
+**Sign in** — the tool is behind a login. Use the account credentials Nadun gives
+you (or create your own from the *Create one* link).
 
-- Live: `https://www.netapp.com/devops`
-- Test: `https://netapp-e25migration.vercel.app/devops`
+![Sign in screen](docs/screenshots/login.png)
 
-## Localizations
+**Home** — paste a slug, pick which localizations to test, and run.
 
-Enter the **English (default) URLs** once, then toggle the localization codes
-you want to test. Each selected code is run as its own comparison, with the code
-prepended as the first path segment of both URLs:
+![Home / new comparison](docs/screenshots/home-empty.png)
 
-- `en` — `https://netapp-e25migration.vercel.app/customers/acens-caso-de-exito/`
-- `fr` — `https://netapp-e25migration.vercel.app/fr/customers/acens-caso-de-exito/`
+**Result — Screenshots** — a pixel-diff heatmap (magenta = changed), plus
+side-by-side and onion-skin views, with a difference score per viewport.
 
-Supported codes: `en, fr, de, es, it, ja, ko, pt, zh-hans, zh-hant`. `en` is the
-default and uses the URLs exactly as entered (no prefix). If the URL you paste
-already carries a locale prefix, it is stripped and replaced, so the same input
-works regardless of which locale you copied it from. Results are grouped by
-locale (each tab shows its worst-viewport diff %), then by viewport. Each
-selected locale runs both viewports, so the run takes proportionally longer.
+![Visual diff result](docs/screenshots/result-screenshots.png)
 
-## How it works
+**Result — Meta tags** — every meta tag on the **live** site (the source of
+truth) with a status for the migration: **Yes** (matches), **Validate** (exists
+but the value differs — check it), or **No** (missing).
 
-- `app/api/compare/route.ts` — POST endpoint that launches Chromium, captures
-  both pages per locale per viewport, diffs them, and writes PNGs to
-  `public/runs/<runId>/<locale>/<viewport>/`.
-- `lib/locales.ts` — supported locale codes and `applyLocale()`, which derives a
-  locale's URL from the base by inserting the path-prefix segment.
-- `lib/capture.ts` — full-page screenshot for one URL + viewport.
-- `lib/prepare.ts` — stabilizes each page before the shot (disables animations,
-  hides cookie banners, triggers lazy-loaded content, waits for fonts).
-- `lib/diff.ts` — pads images to equal size and runs `pixelmatch`.
+![Meta tag comparison](docs/screenshots/result-meta.png)
 
-## Bot protection (important)
+---
 
-By default the tool launches a **visible (headed) Chrome window**. Many
-production sites (e.g. anything behind Akamai, including `netapp.com`) detect and
-block the headless browser fingerprint, returning an "Access Denied" page. A real
-window is far less detectable, so headed mode is required to capture those sites.
-A browser window will briefly open during each run — this is expected.
+## First-time setup (step by step)
 
-To force headless mode (faster, no window — fine for sites without bot
-protection), set the env var:
+You only do steps 1–4 once.
+
+1. **Install [Node.js](https://nodejs.org/) 20 or newer.** Check with:
+   ```bash
+   node -v
+   ```
+2. **Install the project dependencies** (run this inside the project folder):
+   ```bash
+   npm install
+   ```
+3. **Install the browser** the tool uses to take screenshots:
+   ```bash
+   npm run pw:install
+   ```
+4. **Add the secret config.** Create a file named `.env.local` in the project
+   root and paste the values **from Nadun Nissanka** into it. (See the important
+   note at the top — the app cannot run without this.)
+5. **Start the app:**
+   ```bash
+   npm run dev
+   ```
+6. Open **http://localhost:3000** in your browser and sign in.
+
+---
+
+## How to use it (the basics)
+
+### 1. Set your base URLs once (Settings)
+
+Click **Settings** (top right). Enter the base URL of the **live** site and the
+**migration** site — e.g. `https://netapp.com` and
+`https://netapp-e25migration.vercel.app`. Click **Save settings**.
+
+![Settings](docs/screenshots/settings.png)
+
+Now you never have to type full URLs again — you just paste the part after the
+domain (the "slug").
+
+### 2. Run a comparison
+
+On the home page:
+
+1. **Slug** — paste the path of the page you want to check, e.g.
+   `/customers/acens-caso-de-exito`. The tool shows you the exact **Live** and
+   **Test** URLs it will compare so you can double-check them.
+2. **Localizations** — pick the language versions to test (`en` is the default).
+   Each one adds its prefix to the URL (e.g. `/it/...` for Italian). Tip: each
+   locale runs both desktop **and** mobile, so more locales = a longer run.
+3. Click **Run comparison**. Capturing full pages can take up to a minute per
+   site, so give it a moment.
+
+### 3. Read the results
+
+When the run finishes, the right side shows the **Result** panel with two tabs:
+
+- **Screenshots** — pick a viewport (Desktop / Mobile) and a view:
+  - **Heatmap** — changed pixels are highlighted in magenta.
+  - **Side by side** — live and test next to each other.
+  - **Onion skin** — drag the slider to fade between live and test to spot
+    layout shifts.
+  - The **difference score** (e.g. `26.49%`) tells you how much changed. Green =
+    a close match, amber = minor, red = significant.
+- **Meta tags** — a table of the live site's meta tags with **Yes / Validate /
+  No** for the migration. A red number on the tab tells you how many need
+  attention.
+
+> A note on the diff %: pages of different heights are padded to the taller size
+> before comparing, so a big height difference can inflate the percentage. Use
+> **side-by-side** and **onion-skin** to judge real layout changes.
+
+### 4. Recent runs
+
+Every comparison is saved under **Recent runs**. Click any row to re-open its
+results (no need to run it again). Hover a row and click the **trash icon** to
+delete a run — you'll be asked to confirm first.
+
+---
+
+## Heads up: bot protection
+
+Some live sites (anything behind **Akamai**, including `netapp.com`) block
+automated/headless browsers and return an *"Access Denied"* page. To get around
+this, the tool launches a **real, visible Chrome window** while it captures — so
+**a browser window will briefly pop open during each run. That's expected**,
+don't close it. If a page is still blocked or needs a login, that one panel
+shows a capture error instead of crashing the whole run.
+
+To force the faster headless mode (fine for sites without bot protection):
 
 ```bash
 HEADLESS=true npm run dev
 ```
 
-## Notes
+---
 
-- Generated screenshots live under `public/runs/` (git-ignored). Delete that
-  folder to clear history.
-- Runs locally only — Playwright needs a real browser, which doesn't run on
-  serverless platforms like Vercel functions.
-- Some sites still block automation or require auth; those pages report a
-  per-URL capture error in the results instead of crashing the run.
-- A note on the diff %: full pages of differing height are padded to the taller
-  size with white before diffing, so a large height difference between the two
-  sites inflates the percentage. Use the side-by-side and onion-skin views to
-  judge real layout changes.
+## Under the hood (for the curious)
+
+- **Next.js** app with **Supabase** (database, auth, screenshot storage) via
+  **Prisma**.
+- `app/api/compare/route.ts` — launches Chromium, captures both pages per locale
+  per viewport, diffs them, uploads screenshots, runs the meta-tag check, and
+  saves the run.
+- `lib/capture.ts` / `lib/prepare.ts` — take each screenshot and clean the page
+  first (disable animations, **hide cookie/consent popups**, trigger lazy-loaded
+  content, wait for fonts).
+- `lib/diff.ts` — pixel comparison via `pixelmatch`.
+- `lib/meta.ts` — fetches both pages' HTML and compares their meta tags.
+
+See `specs/` for design notes (including the plan to deploy on Vercel).
